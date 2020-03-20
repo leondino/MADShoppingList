@@ -1,10 +1,12 @@
-package com.example.shoppinglist
+package com.example.shoppinglist.ui
 
 import android.content.Context
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
+import com.example.shoppinglist.R
+import com.example.shoppinglist.model.Product
 import kotlinx.android.synthetic.main.item_product.view.*
 
 class ProductAdapter(private val products: List<Product>, private val context: Context) :

@@ -1,8 +1,6 @@
-package com.example.shoppinglist
+package com.example.shoppinglist.ui
 
 import android.os.Bundle
-import android.telephony.mbms.MbmsErrors
-import com.google.android.material.snackbar.Snackbar
 import androidx.appcompat.app.AppCompatActivity
 import android.view.Menu
 import android.view.MenuItem
@@ -11,6 +9,9 @@ import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.example.shoppinglist.R
+import com.example.shoppinglist.database.ProductRepository
+import com.example.shoppinglist.model.Product
 
 import kotlinx.android.synthetic.main.activity_shopping_list.*
 import kotlinx.android.synthetic.main.content_shopping_list.*
@@ -23,7 +24,8 @@ class ShoppingListActivity : AppCompatActivity() {
 
     private val mainScope = CoroutineScope(Dispatchers.Main)
     private val products = arrayListOf<Product>()
-    private val productAdapter = ProductAdapter(products, this)
+    private val productAdapter =
+        ProductAdapter(products, this)
     private lateinit var productRepository: ProductRepository
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -32,7 +34,8 @@ class ShoppingListActivity : AppCompatActivity() {
         setSupportActionBar(toolbar)
         supportActionBar?.title = getString(R.string.bar_title)
 
-        productRepository = ProductRepository(this)
+        productRepository =
+            ProductRepository(this)
         initView()
 
         fab.setOnClickListener {
@@ -71,11 +74,16 @@ class ShoppingListActivity : AppCompatActivity() {
     private fun addProduct(){
         if(validateItem()){
             mainScope.launch {
-                val product = Product(etQuantity.text.toString().toInt(), etProduct.text.toString())
+                val product = Product(
+                    etQuantity.text.toString().toInt(), etProduct.text.toString()
+                )
                 withContext(Dispatchers.IO){
                     productRepository.insertProduct(product)
                 }
                 getShoppingListFromDatabase()
+                // Clears text field automatically after adding product (it annoyed me)
+                etQuantity.text?.clear()
+                etProduct.text?.clear()
             }
         }
     }
@@ -94,7 +102,7 @@ class ShoppingListActivity : AppCompatActivity() {
             override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
                 val position =  viewHolder.adapterPosition
                 val productToDelete = products[position]
-                CoroutineScope(Dispatchers.Main).launch {
+                mainScope.launch {
                     withContext(Dispatchers.IO) {
                         productRepository.deleteProduct(productToDelete)
                     }
@@ -107,9 +115,18 @@ class ShoppingListActivity : AppCompatActivity() {
         return ItemTouchHelper(callback)
     }
 
+    private fun deleteShoppingList(){
+        mainScope.launch {
+            withContext(Dispatchers.IO){
+                productRepository.deleteAllProducts()
+            }
+            getShoppingListFromDatabase()
+        }
+    }
+
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         // Inflate the menu; this adds items to the action bar if it is present.
-        menuInflater.inflate(R.menu.menu_main, menu)
+        menuInflater.inflate(R.menu.menu_shopping_list, menu)
         return true
     }
 
@@ -118,7 +135,10 @@ class ShoppingListActivity : AppCompatActivity() {
         // automatically handle clicks on the Home/Up button, so long
         // as you specify a parent activity in AndroidManifest.xml.
         return when (item.itemId) {
-            R.id.action_settings -> true
+            R.id.action_delete_shopping_list -> {
+                deleteShoppingList()
+                true
+            }
             else -> super.onOptionsItemSelected(item)
         }
     }
