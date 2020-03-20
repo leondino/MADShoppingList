@@ -4,4 +4,6 @@
     <string name="what_to_but">What to buy?</string>
     <string name="how_many">How many?</string>
     <string name="product">%1$d %2$s</string>
+    <string name="error_message">Please fill in both fields</string>
+    <string name="bar_title">Shopping List</string>
 </resources>

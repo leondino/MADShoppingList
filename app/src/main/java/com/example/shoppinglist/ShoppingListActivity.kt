@@ -6,6 +6,7 @@ import com.google.android.material.snackbar.Snackbar
 import androidx.appcompat.app.AppCompatActivity
 import android.view.Menu
 import android.view.MenuItem
+import android.widget.Toast
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -20,19 +21,22 @@ import kotlinx.coroutines.withContext
 
 class ShoppingListActivity : AppCompatActivity() {
 
+    private val mainScope = CoroutineScope(Dispatchers.Main)
     private val products = arrayListOf<Product>()
     private val productAdapter = ProductAdapter(products, this)
+    private lateinit var productRepository: ProductRepository
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_shopping_list)
         setSupportActionBar(toolbar)
+        supportActionBar?.title = getString(R.string.bar_title)
 
+        productRepository = ProductRepository(this)
         initView()
 
-        fab.setOnClickListener { view ->
-            Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                .setAction("Action", null).show()
+        fab.setOnClickListener {
+            addProduct()
         }
     }
 
@@ -41,7 +45,41 @@ class ShoppingListActivity : AppCompatActivity() {
         rvProduct.adapter = productAdapter
         rvProduct.addItemDecoration(DividerItemDecoration(this, DividerItemDecoration.VERTICAL))
         createItemTouchHelper().attachToRecyclerView(rvProduct)
+        getShoppingListFromDatabase()
     }
+
+    private fun getShoppingListFromDatabase() {
+        mainScope.launch {
+            val shoppingList = withContext(Dispatchers.IO) {
+                productRepository.getAllProducts()
+            }
+            this@ShoppingListActivity.products.clear()
+            this@ShoppingListActivity.products.addAll(shoppingList)
+            this@ShoppingListActivity.productAdapter.notifyDataSetChanged()
+        }
+    }
+
+    private fun validateItem(): Boolean{
+        return if (etProduct.text.toString().isNotBlank() && etQuantity.text.toString().isNotBlank()) {
+            true
+        } else {
+            Toast.makeText(this, getString(R.string.error_message), Toast.LENGTH_SHORT).show()
+            false
+        }
+    }
+
+    private fun addProduct(){
+        if(validateItem()){
+            mainScope.launch {
+                val product = Product(etQuantity.text.toString().toInt(), etProduct.text.toString())
+                withContext(Dispatchers.IO){
+                    productRepository.insertProduct(product)
+                }
+                getShoppingListFromDatabase()
+            }
+        }
+    }
+
 
     private fun createItemTouchHelper() : ItemTouchHelper {
         val callback = object : ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT){
@@ -58,9 +96,9 @@ class ShoppingListActivity : AppCompatActivity() {
                 val productToDelete = products[position]
                 CoroutineScope(Dispatchers.Main).launch {
                     withContext(Dispatchers.IO) {
-                        //reminderRepository.deleteReminder(productToDelete)
+                        productRepository.deleteProduct(productToDelete)
                     }
-                    //getRemindersFromDatabase()
+                    getShoppingListFromDatabase()
                 }
             }
 
